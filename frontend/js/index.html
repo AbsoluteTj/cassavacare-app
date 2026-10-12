@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CassavaCare AI - Deteksi Penyakit Singkong</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom Loader */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #16a34a;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans text-gray-800 antialiased min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-green-600 text-white shadow-md sticky top-0 z-10">
+        <div class="max-w-4xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                <h1 class="text-xl font-bold">CassavaCare AI</h1>
+            </div>
+            <div id="nav-actions">
+                <!-- Tombol Login (Ditampilkan jika belum login) -->
+                <button id="btn-show-login" class="bg-white text-green-700 font-semibold px-4 py-1.5 rounded-full text-sm hover:bg-gray-100 transition hidden">Masuk</button>
+                <!-- Info User (Ditampilkan jika sudah login) -->
+                <div id="user-info" class="flex items-center gap-3 hidden">
+                    <span id="user-name" class="text-sm font-medium hidden sm:block"></span>
+                    <button id="btn-logout" class="bg-red-500 hover:bg-red-600 text-white text-sm px-3 py-1.5 rounded-full transition">Keluar</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow max-w-4xl mx-auto w-full p-4 flex flex-col gap-6">
+        
+        <!-- Welcome / Guest View -->
+        <section id="guest-view" class="text-center py-12 px-4 bg-white rounded-2xl shadow-sm border border-gray-100 mt-6">
+            <h2 class="text-2xl font-bold text-gray-800 mb-2">Selamat Datang di CassavaCare</h2>
+            <p class="text-gray-600 mb-6">Deteksi penyakit daun singkong dengan mudah menggunakan AI. Silakan masuk untuk mulai memindai daun dari kebun Anda.</p>
+            <button onclick="toggleModal('auth-modal')" class="bg-green-600 text-white font-bold py-3 px-8 rounded-full shadow-lg hover:bg-green-700 w-full sm:w-auto">Mulai Sekarang</button>
+        </section>
+
+        <!-- User View (Dashboard & Scanner) -->
+        <div id="user-view" class="hidden flex-col gap-6">
+            
+            <!-- Scanner Section -->
+            <section class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 text-center">
+                <h3 class="text-lg font-bold mb-4 text-gray-700">Ambil Foto Daun Singkong</h3>
+                
+                <!-- Input File Hidden (Mengaktifkan kamera belakang di HP) -->
+                <input type="file" id="image-input" accept="image/jpeg, image/png" capture="environment" class="hidden">
+                
+                <!-- Preview Area -->
+                <div id="image-preview-container" class="hidden mb-4">
+                    <img id="image-preview" class="w-full max-w-xs mx-auto rounded-lg shadow-md aspect-square object-cover" src="" alt="Preview">
+                </div>
+
+                <div class="flex flex-col sm:flex-row justify-center gap-3">
+                    <button id="btn-capture" class="bg-green-600 text-white px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-md hover:bg-green-700 w-full sm:w-auto">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                        Ambil / Unggah Foto
+                    </button>
+                    <button id="btn-analyze" class="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-md hover:bg-blue-700 hidden w-full sm:w-auto">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+                        Analisis AI
+                    </button>
+                </div>
+
+                <!-- Loading State -->
+                <div id="loading-indicator" class="hidden mt-6 flex-col items-center gap-3">
+                    <div class="loader"></div>
+                    <p class="text-green-700 font-medium animate-pulse">AI sedang menganalisis gambar...</p>
+                </div>
+            </section>
+
+            <!-- Result Card -->
+            <section id="result-section" class="hidden">
+                <div id="result-card" class="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+                    <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                        <h3 class="text-lg font-bold text-gray-800">Hasil Diagnosa</h3>
+                        <span id="res-confidence" class="px-3 py-1 rounded-full text-sm font-bold"></span>
+                    </div>
+                    
+                    <div class="p-5 flex flex-col gap-4">
+                        <!-- Fallback Alert -->
+                        <div id="fallback-alert" class="hidden bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-md">
+                            <div class="flex items-start">
+                                <svg class="h-6 w-6 text-yellow-600 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                                <div>
+                                    <h4 class="text-yellow-800 font-bold text-sm">Peringatan Kualitas Foto (AI < 70%)</h4>
+                                    <p id="fallback-msg" class="text-yellow-700 text-sm mt-1"></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <p class="text-sm text-gray-500">Penyakit Terdeteksi:</p>
+                            <h4 id="res-disease" class="text-2xl font-bold text-green-700"></h4>
+                        </div>
+                        <div class="bg-green-50 p-4 rounded-xl border border-green-100">
+                            <p class="text-sm text-green-800 font-bold mb-1">Rekomendasi Penanganan:</p>
+                            <p id="res-treatment" class="text-sm text-green-700 leading-relaxed"></p>
+                        </div>
+                        <button onclick="resetScanner()" class="mt-2 text-center text-gray-500 font-medium text-sm hover:text-gray-800">Pindai Daun Lainnya</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- History Table -->
+            <section class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-bold text-gray-700">Riwayat Diagnosa</h3>
+                    <button onclick="loadHistory()" class="text-green-600 hover:text-green-800"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg></button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left">
+                        <thead class="text-xs text-gray-500 uppercase bg-gray-50 border-b">
+                            <tr>
+                                <th class="px-4 py-3">Tanggal</th>
+                                <th class="px-4 py-3">Penyakit</th>
+                                <th class="px-4 py-3">Kepercayaan</th>
+                                <th class="px-4 py-3">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-tbody" class="divide-y divide-gray-100">
+                            <!-- Rows akan diisi via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Modal Auth (Login / Register) -->
+    <div id="auth-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col max-h-full">
+            <div class="flex justify-between items-center p-4 border-b">
+                <h3 id="modal-title" class="text-lg font-bold text-gray-800">Masuk Akun</h3>
+                <button onclick="toggleModal('auth-modal')" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="p-5 overflow-y-auto">
+                <form id="auth-form" class="flex flex-col gap-4">
+                    <div id="register-fields" class="hidden flex flex-col gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap</label>
+                            <input type="text" id="full_name" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Budi Santoso">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <input type="email" id="email" required class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="petani@cassavacare.id">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                        <input type="password" id="password" required class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Minimal 8 karakter">
+                    </div>
+                    <div id="auth-error" class="text-red-500 text-sm hidden font-medium"></div>
+                    <button type="submit" id="btn-auth-submit" class="bg-green-600 text-white font-bold py-2.5 rounded-lg hover:bg-green-700 mt-2">Masuk</button>
+                </form>
+                <div class="mt-4 text-center text-sm text-gray-600">
+                    <span id="auth-switch-text">Belum punya akun?</span> 
+                    <button type="button" onclick="toggleAuthMode()" class="text-green-600 font-bold hover:underline" id="auth-switch-btn">Daftar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        const API_BASE = "http://localhost:8000/api/v1";
+        let isLoginMode = true;
+        let currentFile = null;
+
+        // Elements
+        const guestView = document.getElementById('guest-view');
+        const userView = document.getElementById('user-view');
+        const btnShowLogin = document.getElementById('btn-show-login');
+        const userInfo = document.getElementById('user-info');
+        const userName = document.getElementById('user-name');
+        const imageInput = document.getElementById('image-input');
+        const btnCapture = document.getElementById('btn-capture');
+        const btnAnalyze = document.getElementById('btn-analyze');
+        const imagePreview = document.getElementById('image-preview');
+        const imagePreviewContainer = document.getElementById('image-preview-container');
+
+        // Initialization
+        document.addEventListener('DOMContentLoaded', () => {
+            btnShowLogin.addEventListener('click', () => toggleModal('auth-modal'));
+            document.getElementById('btn-logout').addEventListener('click', logout);
+            document.getElementById('auth-form').addEventListener('submit', handleAuthSubmit);
+            
+            // Scanner events
+            btnCapture.addEventListener('click', () => imageInput.click());
+            imageInput.addEventListener('change', handleFileChange);
+            btnAnalyze.addEventListener('click', uploadAndAnalyze);
+
+            checkAuth();
+        });
+
+        function toggleModal(id) {
+            const modal = document.getElementById(id);
+            modal.classList.toggle('hidden');
+        }
+
+        function toggleAuthMode() {
+            isLoginMode = !isLoginMode;
+            document.getElementById('modal-title').innerText = isLoginMode ? "Masuk Akun" : "Daftar Akun";
+            document.getElementById('btn-auth-submit').innerText = isLoginMode ? "Masuk" : "Daftar";
+            document.getElementById('auth-switch-text').innerText = isLoginMode ? "Belum punya akun?" : "Sudah punya akun?";
+            document.getElementById('auth-switch-btn').innerText = isLoginMode ? "Daftar" : "Masuk";
+            document.getElementById('register-fields').classList.toggle('hidden', isLoginMode);
+            document.getElementById('auth-error').classList.add('hidden');
+        }
+
+        // --- AUTH LOGIC ---
+        async function checkAuth() {
+            const token = localStorage.getItem('access_token');
+            if (!token) {
+                showGuestView();
+                return;
+            }
+            try {
+                const res = await fetch(`${API_BASE}/auth/me`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    showUserView(data.data);
+                } else {
+                    logout();
+                }
+            } catch (err) {
+                console.error(err);
+                showGuestView();
+            }
+        }
+
+        async function handleAuthSubmit(e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const full_name = document.getElementById('full_name').value;
+            const errorDiv = document.getElementById('auth-error');
+            
+            const endpoint = isLoginMode ? '/auth/login' : '/auth/signup';
+            const payload = isLoginMode ? { email, password } : { email, password, full_name, role: "FARMER" };
+
+            try {
+                const res = await fetch(`${API_BASE}${endpoint}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                
+                if (res.ok) {
+                    localStorage.setItem('access_token', data.data.tokens.access_token);
+                    toggleModal('auth-modal');
+                    document.getElementById('auth-form').reset();
+                    checkAuth();
+                } else {
+                    errorDiv.innerText = data.message || "Terjadi kesalahan";
+                    errorDiv.classList.remove('hidden');
+                }
+            } catch (err) {
+                errorDiv.innerText = "Gagal terhubung ke server.";
+                errorDiv.classList.remove('hidden');
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('access_token');
+            showGuestView();
+        }
+
+        function showGuestView() {
+            guestView.classList.remove('hidden');
+            userView.classList.add('hidden');
+            btnShowLogin.classList.remove('hidden');
+            userInfo.classList.add('hidden');
+        }
+
+        function showUserView(user) {
+            guestView.classList.add('hidden');
+            userView.classList.remove('hidden');
+            btnShowLogin.classList.add('hidden');
+            userInfo.classList.remove('hidden');
+            userName.innerText = `Halo, ${user.full_name || 'Petani'}`;
+            loadHistory();
+        }
+
+        // --- SCANNER & PREDICTION LOGIC ---
+        function handleFileChange(e) {
+            const file = e.target.files[0];
+            if (file) {
+                if (file.size > 5 * 1024 * 1024) {
+                    alert("Ukuran file terlalu besar! Maksimal 5MB.");
+                    return;
+                }
+                currentFile = file;
+                imagePreview.src = URL.createObjectURL(file);
+                imagePreviewContainer.classList.remove('hidden');
+                btnAnalyze.classList.remove('hidden');
+                btnCapture.innerText = "Ganti Foto";
+                document.getElementById('result-section').classList.add('hidden');
+            }
+        }
+
+        function resetScanner() {
+            currentFile = null;
+            imageInput.value = "";
+            imagePreviewContainer.classList.add('hidden');
+            btnAnalyze.classList.add('hidden');
+            btnCapture.innerText = "Ambil / Unggah Foto";
+            document.getElementById('result-section').classList.add('hidden');
+        }
+
+        async function uploadAndAnalyze() {
+            if (!currentFile) return;
+            
+            const formData = new FormData();
+            formData.append('image', currentFile);
+            
+            document.getElementById('loading-indicator').classList.remove('hidden');
+            btnAnalyze.classList.add('hidden');
+            btnCapture.classList.add('hidden');
+            
+            try {
+                const token = localStorage.getItem('access_token');
+                const res = await fetch(`${API_BASE}/predictions`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: formData
+                });
+                
+                const data = await res.json();
+                if (res.ok) {
+                    renderResult(data.data, data.warning);
+                    loadHistory(); // Refresh riwayat
+                } else {
+                    alert("Gagal: " + (data.message || "Kesalahan server"));
+                    resetScanner();
+                }
+            } catch (err) {
+                alert("Gagal terhubung ke server.");
+                resetScanner();
+            } finally {
+                document.getElementById('loading-indicator').classList.add('hidden');
+                btnCapture.classList.remove('hidden');
+                btnAnalyze.classList.remove('hidden');
+            }
+        }
+
+        function renderResult(predData, warning) {
+            const resultSection = document.getElementById('result-section');
+            const confBadge = document.getElementById('res-confidence');
+            const fallbackAlert = document.getElementById('fallback-alert');
+            
+            // Set data teks
+            document.getElementById('res-disease').innerText = predData.predicted_label === 'HEALTHY' ? 'Tanaman Sehat' : predData.predicted_label;
+            
+            // Persentase
+            const percentage = (predData.confidence_score * 100).toFixed(1) + '%';
+            confBadge.innerText = `Keyakinan: ${percentage}`;
+            
+            // Logic Status (CONFIDENT / LOW_CONFIDENCE)
+            if (predData.status === 'LOW_CONFIDENCE' || warning) {
+                confBadge.className = "px-3 py-1 rounded-full text-sm font-bold bg-yellow-100 text-yellow-700";
+                fallbackAlert.classList.remove('hidden');
+                document.getElementById('fallback-msg').innerText = warning ? warning.user_message : "Foto kurang jelas. Mohon ulangi dengan pencahayaan baik.";
+                document.getElementById('res-treatment').innerText = "Rekomendasi tidak tersedia karena akurasi rendah. Harap ikuti petunjuk perbaikan foto di atas.";
+            } else {
+                confBadge.className = "px-3 py-1 rounded-full text-sm font-bold bg-green-100 text-green-700";
+                fallbackAlert.classList.add('hidden');
+                // Mock deskripsi penanganan jika disease_info kosong
+                document.getElementById('res-treatment').innerText = predData.disease_info ? predData.disease_info.treatment : "Segera isolasi tanaman atau konsultasikan ke PPL terdekat (Data mock).";
+            }
+            
+            resultSection.classList.remove('hidden');
+            resultSection.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // --- HISTORY LOGIC ---
+        async function loadHistory() {
+            const tbody = document.getElementById('history-tbody');
+            tbody.innerHTML = '<tr><td colspan="4" class="px-4 py-4 text-center text-gray-500">Memuat riwayat...</td></tr>';
+            
+            try {
+                const token = localStorage.getItem('access_token');
+                const res = await fetch(`${API_BASE}/predictions`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (res.ok) {
+                    const data = await res.json();
+                    const list = data.data || [];
+                    
+                    if (list.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="4" class="px-4 py-4 text-center text-gray-500">Belum ada riwayat scan.</td></tr>';
+                        return;
+                    }
+
+                    tbody.innerHTML = list.map(item => {
+                        const date = new Date(item.created_at).toLocaleDateString('id-ID');
+                        const confPct = (item.confidence_score * 100).toFixed(0) + '%';
+                        const badgeColor = item.status === 'LOW_CONFIDENCE' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700';
+                        const statusLabel = item.status === 'LOW_CONFIDENCE' ? 'Rendah' : 'Yakin';
+                        
+                        return `
+                        <tr class="border-b border-gray-50 hover:bg-gray-50">
+                            <td class="px-4 py-3 whitespace-nowrap">${date}</td>
+                            <td class="px-4 py-3 font-medium text-gray-800">${item.predicted_label}</td>
+                            <td class="px-4 py-3">${confPct}</td>
+                            <td class="px-4 py-3">
+                                <span class="px-2 py-1 text-xs font-semibold rounded-full ${badgeColor}">${statusLabel}</span>
+                            </td>
+                        </tr>`;
+                    }).join('');
+                } else {
+                    // Fallback UI jika Endpoint belum diimplementasi di Backend Dummy
+                    tbody.innerHTML = '<tr><td colspan="4" class="px-4 py-4 text-center text-gray-400 text-sm italic">Riwayat tidak dapat dimuat (Endpoint belum siap di backend).</td></tr>';
+                }
+            } catch (err) {
+                tbody.innerHTML = '<tr><td colspan="4" class="px-4 py-4 text-center text-red-500">Gagal mengambil data.</td></tr>';
+            }
+        }
+    </script>
+</body>
+</html>

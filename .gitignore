@@ -1,0 +1,15 @@
+# Python Virtual Environment 
+backend/.app/ 
+.app/ 
+venv/ 
+
+# Byte-compiled / cache 
+__pycache__/ 
+*.py[cod] 
+
+# Database lokal 
+*.db 
+*.sqlite3 
+
+# Environment variables rahasia 
+.env
